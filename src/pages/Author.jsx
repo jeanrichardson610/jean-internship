@@ -1,10 +1,36 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import AuthorBanner from "../images/author_banner.jpg";
 import AuthorItems from "../components/author/AuthorItems";
-import { Link } from "react-router-dom";
-import AuthorImage from "../images/author_thumbnail.jpg";
+import { useParams } from "react-router-dom";
+import axios from "axios";
+import Skeleton from "react-loading-skeleton";
 
 const Author = () => {
+  const { authorId } = useParams();
+  const [authorData, setAuthorData] = useState({});
+  const [follow, setFollow] = useState(false);
+  const loading = !authorData.authorImage; // loading if data not yet fetched
+
+  useEffect(() => {
+      window.scrollTo(0, 0);
+    }, []);
+
+  async function fetchAuthor() {
+    try {
+      const { data } = await axios.get(
+        `https://us-central1-nft-cloud-functions.cloudfunctions.net/authors?author=${authorId}`
+      );
+      setAuthorData(data);
+    } catch (error) {
+      console.error("Error fetching api:", error);
+      setAuthorData({});
+    }
+  }
+
+  useEffect(() => {
+    fetchAuthor();
+  }, [authorId]);
+
   return (
     <div id="wrapper">
       <div className="no-bottom no-top" id="content">
@@ -14,7 +40,6 @@ const Author = () => {
           id="profile_banner"
           aria-label="section"
           className="text-light"
-          data-bgimage="url(images/author_banner.jpg) top"
           style={{ background: `url(${AuthorBanner}) top` }}
         ></section>
 
@@ -25,29 +50,42 @@ const Author = () => {
                 <div className="d_profile de-flex">
                   <div className="de-flex-col">
                     <div className="profile_avatar">
-                      <img src={AuthorImage} alt="" />
-
+                      {loading ? (
+                        <Skeleton circle={true} height={150} width={150} />
+                      ) : (
+                        <img src={authorData?.authorImage} alt="" />
+                      )}
                       <i className="fa fa-check"></i>
                       <div className="profile_name">
                         <h4>
-                          Monica Lucas
-                          <span className="profile_username">@monicaaaa</span>
-                          <span id="wallet" className="profile_wallet">
-                            UDHUHWudhwd78wdt7edb32uidbwyuidhg7wUHIFUHWewiqdj87dy7
+                          {loading ? <Skeleton /> : authorData?.authorName}
+                          <span className="profile_username">
+                            {loading ? <Skeleton /> : `@${authorData?.tag}`}
                           </span>
-                          <button id="btn_copy" title="Copy Text">
-                            Copy
-                          </button>
+                          <span id="wallet" className="profile_wallet">
+                            {loading ? <Skeleton width={200} /> : authorData?.address}
+                          </span>
                         </h4>
                       </div>
                     </div>
                   </div>
+
                   <div className="profile_follow de-flex">
                     <div className="de-flex-col">
-                      <div className="profile_follower">573 followers</div>
-                      <Link to="#" className="btn-main">
-                        Follow
-                      </Link>
+                      <div className="profile_follower">
+                        {loading
+                          ? <Skeleton width={100} />
+                          : follow
+                          ? authorData?.followers + 1
+                          : authorData?.followers}{" "}
+                        followers
+                      </div>
+                      <button
+                        className="btn-main"
+                        onClick={() => setFollow(!follow)}
+                      >
+                        {follow ? "Unfollow" : "Follow"}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -55,7 +93,7 @@ const Author = () => {
 
               <div className="col-md-12">
                 <div className="de_tab tab_simple">
-                  <AuthorItems />
+                  <AuthorItems authorData={authorData} fetchAuthor={fetchAuthor} />
                 </div>
               </div>
             </div>
